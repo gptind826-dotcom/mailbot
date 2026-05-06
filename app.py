@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 PORT = int(os.environ.get("PORT", 8080))
-BOT_TOKEN = os.environ.get("8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ", "")
+BOT_TOKEN = os.environ.get("8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
 
 app_flask = Flask(__name__)
