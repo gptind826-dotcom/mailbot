@@ -13,7 +13,7 @@ from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Setup logging so Render captures errors in logs
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -21,7 +21,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 PORT = int(os.environ.get("PORT", 8080))
-BOT_TOKEN = os.environ.get("8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
+# FIXED: Correct environment variable name
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
 
 app_flask = Flask(__name__)
@@ -636,55 +637,64 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ═══════════════════════════════════════════════════════════════
-# FIXED: Reversed architecture for Render compatibility
-# Flask runs as the MAIN foreground service (required by Render)
-# Telegram bot runs in a BACKGROUND daemon thread
+# FIXED: Proper bot initialization for Render compatibility
 # ═══════════════════════════════════════════════════════════════
 
-def run_telegram_bot():
-    """Run the Telegram bot in a background thread with its own event loop."""
-    async def bot_main():
-        try:
-            if not BOT_TOKEN or ":" not in BOT_TOKEN:
-                logger.error("❌ BOT_TOKEN is missing or invalid! Set it in Render environment variables.")
-                return
-
-            application = Application.builder().token(BOT_TOKEN).build()
-            application.add_handler(CommandHandler("start", start))
-            application.add_handler(CommandHandler("cancel", cancel))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-            logger.info("🤖 BOT: Initializing...")
-            await application.initialize()
-            await application.start()
-            await application.updater.start_polling()
-            logger.info("✅ BOT: Running and polling for messages!")
-
-            # Keep the bot alive indefinitely
-            while True:
-                await asyncio.sleep(1)
-
-        except Exception as e:
-            logger.error(f"❌ BOT CRASHED: {e}", exc_info=True)
-            # Keep thread alive so it doesn't kill Flask - attempt restart after delay
-            await asyncio.sleep(10)
-            logger.info("🔄 BOT: Attempting to restart...")
-
-    # Run the async bot_main in a fresh event loop (required for threads)
+async def run_bot():
+    """Initialize and run the Telegram bot properly"""
     try:
-        asyncio.run(bot_main())
-    except Exception as e:
-        logger.error(f"❌ Bot thread fatal error: {e}", exc_info=True)
+        if not BOT_TOKEN or ":" not in BOT_TOKEN:
+            logger.error("❌ BOT_TOKEN is missing or invalid! Set it in Render environment variables.")
+            return
 
+        # Create Application
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Add handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("cancel", cancel))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+        # Initialize and start polling
+        logger.info("🤖 Starting bot...")
+        await application.initialize()
+        await application.start()
+        
+        # Start polling
+        await application.updater.start_polling()
+        
+        logger.info("✅ Bot is running and polling for messages!")
+        
+        # Keep the bot running
+        while True:
+            await asyncio.sleep(1)
+        
+    except Exception as e:
+        logger.error(f"❌ Bot error: {e}", exc_info=True)
+        raise
+
+def run_bot_thread():
+    """Run bot in a separate thread with its own event loop"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    while True:
+        try:
+            loop.run_until_complete(run_bot())
+        except Exception as e:
+            logger.error(f"❌ Bot crashed: {e}", exc_info=True)
+            logger.info("🔄 Restarting bot in 10 seconds...")
+            time.sleep(10)
 
 if __name__ == "__main__":
-    # Start Telegram bot in a background daemon thread
-    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
-    bot_thread.start()
-
-    logger.info(f"🌐 FLASK: Starting server on port {PORT}")
-    logger.info("📝 If Render health checks fail, check that PORT env var matches.")
-
-    # Run Flask as the MAIN foreground process (Render requires this)
-    # This keeps the process alive and binds to the expected port
+    # Start bot in background thread
+    if BOT_TOKEN and ":" in BOT_TOKEN:
+        bot_thread = threading.Thread(target=run_bot_thread, daemon=True)
+        bot_thread.start()
+        logger.info("✅ Bot thread started")
+    else:
+        logger.warning("⚠️ BOT_TOKEN not set, running Flask only")
+    
+    # Start Flask as main process
+    logger.info(f"🌐 Starting Flask server on port {PORT}")
     app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
