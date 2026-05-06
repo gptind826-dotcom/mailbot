@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import requests
 import json
 import re
@@ -7,21 +8,13 @@ import os
 import threading
 import time
 import asyncio
-import logging
 from datetime import datetime
 from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
+# FIXED: Port set to 8080 as you requested
 PORT = int(os.environ.get("PORT", 8080))
-# FIXED: Correct environment variable name
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
 
@@ -39,6 +32,11 @@ def home():
 @app_flask.route('/health')
 def health():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+
+def run_flask():
+    """Run Flask server for health checks on port 8080"""
+    print(f"🌐 Starting Flask server on port {PORT}")
+    app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
 def init_db():
     conn = sqlite3.connect('whitelist.db')
@@ -635,66 +633,36 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del context.user_data['conversation']
     await update.message.reply_text("✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!", reply_markup=get_main_keyboard())
 
-
-# ═══════════════════════════════════════════════════════════════
-# FIXED: Proper bot initialization for Render compatibility
-# ═══════════════════════════════════════════════════════════════
-
-async def run_bot():
-    """Initialize and run the Telegram bot properly"""
+async def main():
+    # Start Flask in a separate thread on port 8080
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Create bot application
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    print(f"🤖 𝐁𝐎𝐓 𝐈𝐒 𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆...")
+    print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
+    
+    # Start the bot
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    print("✅ 𝐁𝐎𝐓 𝐈𝐒 𝐑𝐔𝐍𝐍𝐈𝐍𝐆!")
+    
+    # Keep running
     try:
-        if not BOT_TOKEN or ":" not in BOT_TOKEN:
-            logger.error("❌ BOT_TOKEN is missing or invalid! Set it in Render environment variables.")
-            return
-
-        # Create Application
-        application = Application.builder().token(BOT_TOKEN).build()
-        
-        # Add handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("cancel", cancel))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-        # Initialize and start polling
-        logger.info("🤖 Starting bot...")
-        await application.initialize()
-        await application.start()
-        
-        # Start polling
-        await application.updater.start_polling()
-        
-        logger.info("✅ Bot is running and polling for messages!")
-        
-        # Keep the bot running
         while True:
             await asyncio.sleep(1)
-        
-    except Exception as e:
-        logger.error(f"❌ Bot error: {e}", exc_info=True)
-        raise
-
-def run_bot_thread():
-    """Run bot in a separate thread with its own event loop"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    while True:
-        try:
-            loop.run_until_complete(run_bot())
-        except Exception as e:
-            logger.error(f"❌ Bot crashed: {e}", exc_info=True)
-            logger.info("🔄 Restarting bot in 10 seconds...")
-            time.sleep(10)
+    except KeyboardInterrupt:
+        print("🛑 𝐁𝐎𝐓 𝐒𝐓𝐎𝐏𝐏𝐄𝐃")
+        await application.stop()
 
 if __name__ == "__main__":
-    # Start bot in background thread
-    if BOT_TOKEN and ":" in BOT_TOKEN:
-        bot_thread = threading.Thread(target=run_bot_thread, daemon=True)
-        bot_thread.start()
-        logger.info("✅ Bot thread started")
-    else:
-        logger.warning("⚠️ BOT_TOKEN not set, running Flask only")
-    
-    # Start Flask as main process
-    logger.info(f"🌐 Starting Flask server on port {PORT}")
-    app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
+    asyncio.run(main())
