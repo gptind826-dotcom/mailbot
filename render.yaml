@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: exrmail-bot
+    name: mailbot
     runtime: python
     plan: free
     region: singapore
@@ -10,4 +10,4 @@ services:
       - key: BOT_TOKEN
         value: 8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ
       - key: PORT
-        value: 8080
+        value: 10000
