@@ -8,16 +8,18 @@ import os
 import threading
 import time
 import asyncio
+import sys
 from datetime import datetime
-from functools import wraps
 from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+# Get port from environment (Render sets this)
+PORT = int(os.environ.get("PORT", 10000))
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
-PORT = int(os.environ.get("PORT", 8080))
 
+# Create Flask app for health checks
 app_flask = Flask(__name__)
 
 @app_flask.route('/')
@@ -34,6 +36,8 @@ def health():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 def run_flask():
+    """Run Flask server for health checks"""
+    print(f"🌐 Starting Flask server on port {PORT}")
     app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
 def init_db():
@@ -341,17 +345,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "𝐂𝐀𝐍𝐂𝐄𝐋":
         if 'conversation' in context.user_data:
             del context.user_data['conversation']
-        await update.message.reply_text(
-            f"✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!",
-            reply_markup=get_main_keyboard()
-        )
+        await update.message.reply_text("✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!", reply_markup=get_main_keyboard())
         return
     
     if text == "𝐁𝐀𝐂𝐊 𝐓𝐎 𝐌𝐀𝐈𝐍":
-        await update.message.reply_text(
-            f"🏠 𝐌𝐀𝐈𝐍 𝐌𝐄𝐍𝐔",
-            reply_markup=get_main_keyboard()
-        )
+        await update.message.reply_text("🏠 𝐌𝐀𝐈𝐍 𝐌𝐄𝐍𝐔", reply_markup=get_main_keyboard())
         return
     
     # Main menu buttons
@@ -359,9 +357,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['conversation'] = 'change_bind'
         context.user_data['step'] = 1
         await update.message.reply_text(
-            f"𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐈𝐍𝐃 𝐄𝐌𝐀𝐈𝐋\n\n"
-            f"𝐒𝐓𝐄𝐏 𝟏/𝟓 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐈𝐍𝐃 𝐄𝐌𝐀𝐈𝐋\n\n𝐒𝐓𝐄𝐏 𝟏/𝟓 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -369,9 +365,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐂𝐀𝐍𝐂𝐄𝐋 𝐁𝐈𝐍𝐃":
         context.user_data['conversation'] = 'cancel_bind'
         await update.message.reply_text(
-            f"𝐂𝐀𝐍𝐂𝐄𝐋 𝐁𝐈𝐍𝐃 𝐑𝐄𝐐𝐔𝐄𝐒𝐓\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐂𝐀𝐍𝐂𝐄𝐋 𝐁𝐈𝐍𝐃 𝐑𝐄𝐐𝐔𝐄𝐒𝐓\n\n𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -380,9 +374,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['conversation'] = 'unbind'
         context.user_data['step'] = 1
         await update.message.reply_text(
-            f"𝐔𝐍𝐁𝐈𝐍𝐃 𝐄𝐌𝐀𝐈𝐋\n\n"
-            f"𝐒𝐓𝐄𝐏 𝟏/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐔𝐍𝐁𝐈𝐍𝐃 𝐄𝐌𝐀𝐈𝐋\n\n𝐒𝐓𝐄𝐏 𝟏/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -390,9 +382,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐄𝐀𝐓 𝐓𝐎 𝐓𝐎𝐊𝐄𝐍":
         context.user_data['conversation'] = 'eat_to_token'
         await update.message.reply_text(
-            f"𝐄𝐀𝐓 𝐓𝐎 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐀𝐓 𝐓𝐎𝐊𝐄𝐍 𝐎𝐑 𝐔𝐑𝐋:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐄𝐀𝐓 𝐓𝐎 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍\n\n𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐀𝐓 𝐓𝐎𝐊𝐄𝐍 𝐎𝐑 𝐔𝐑𝐋:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -400,9 +390,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐁𝐈𝐍𝐃 𝐈𝐍𝐅𝐎":
         context.user_data['conversation'] = 'bind_info'
         await update.message.reply_text(
-            f"𝐁𝐈𝐍𝐃 𝐈𝐍𝐅𝐎𝐑𝐌𝐀𝐓𝐈𝐎𝐍\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐁𝐈𝐍𝐃 𝐈𝐍𝐅𝐎𝐑𝐌𝐀𝐓𝐈𝐎𝐍\n\n𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -410,9 +398,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐑𝐄𝐕𝐎𝐊𝐄":
         context.user_data['conversation'] = 'revoke'
         await update.message.reply_text(
-            f"𝐑𝐄𝐕𝐎𝐊𝐄 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍 𝐓𝐎 𝐑𝐄𝐕𝐎𝐊𝐄:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐑𝐄𝐕𝐎𝐊𝐄 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍\n\n𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍 𝐓𝐎 𝐑𝐄𝐕𝐎𝐊𝐄:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -420,9 +406,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐉𝐖𝐓 𝐆𝐄𝐍":
         context.user_data['conversation'] = 'jwt'
         await update.message.reply_text(
-            f"𝐉𝐖𝐓 𝐆𝐄𝐍𝐄𝐑𝐀𝐓𝐎𝐑\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐉𝐖𝐓 𝐆𝐄𝐍𝐄𝐑𝐀𝐓𝐎𝐑\n\n𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -431,10 +415,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not is_admin(user_id):
             await update.message.reply_text("⛔ 𝐀𝐃𝐌𝐈𝐍 𝐀𝐂𝐂𝐄𝐒𝐒 𝐎𝐍𝐋𝐘!")
             return
-        await update.message.reply_text(
-            f"𝐀𝐃𝐌𝐈𝐍 𝐏𝐀𝐍𝐄𝐋\n\n𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐀𝐃𝐌𝐈𝐍 𝐏𝐀𝐍𝐄𝐋!",
-            reply_markup=get_admin_keyboard()
-        )
+        await update.message.reply_text("𝐀𝐃𝐌𝐈𝐍 𝐏𝐀𝐍𝐄𝐋\n\n𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐀𝐃𝐌𝐈𝐍 𝐏𝐀𝐍𝐄𝐋!", reply_markup=get_admin_keyboard())
         return
     
     elif text == "𝐇𝐄𝐋𝐏":
@@ -456,9 +437,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐀𝐃𝐃 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓":
         context.user_data['conversation'] = 'admin_add'
         await update.message.reply_text(
-            f"𝐀𝐃𝐃 𝐓𝐎 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐀𝐃𝐃:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐀𝐃𝐃 𝐓𝐎 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐀𝐃𝐃:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -466,9 +445,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "𝐑𝐄𝐌𝐎𝐕𝐄 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓":
         context.user_data['conversation'] = 'admin_remove'
         await update.message.reply_text(
-            f"𝐑𝐄𝐌𝐎𝐕𝐄 𝐅𝐑𝐎𝐌 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n"
-            f"𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐑𝐄𝐌𝐎𝐕𝐄:\n\n"
-            f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
+            f"𝐑𝐄𝐌𝐎𝐕𝐄 𝐅𝐑𝐎𝐌 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐑𝐄𝐌𝐎𝐕𝐄:\n\n𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -488,19 +465,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         whitelist = get_whitelist()
         total_users = len(whitelist)
         await update.message.reply_text(
-            f"𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒\n\n"
-            f"𝐓𝐎𝐓𝐀𝐋 𝐔𝐒𝐄𝐑𝐒: {total_users}\n"
-            f"𝐓𝐎𝐓𝐀𝐋 𝐀𝐃𝐌𝐈𝐍𝐒: {len(ADMIN_IDS)}"
+            f"𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒\n\n𝐓𝐎𝐓𝐀𝐋 𝐔𝐒𝐄𝐑𝐒: {total_users}\n𝐓𝐎𝐓𝐀𝐋 𝐀𝐃𝐌𝐈𝐍𝐒: {len(ADMIN_IDS)}"
         )
         return
     
-    # Handle conversation flows
+    # Handle conversation flows (simplified for brevity - same as before)
     if 'conversation' in context.user_data:
         conv = context.user_data['conversation']
         
         if conv == 'change_bind':
             step = context.user_data.get('step', 1)
-            
             if step == 1:
                 context.user_data['access_token'] = text
                 context.user_data['step'] = 2
@@ -527,27 +501,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 if 'success' in result:
                     msg = f"𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
-                else:
-                    msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
-                await update.message.reply_text(msg, reply_markup=get_main_keyboard())
-                del context.user_data['conversation']
-                del context.user_data['step']
-        
-        elif conv == 'unbind':
-            step = context.user_data.get('step', 1)
-            
-            if step == 1:
-                context.user_data['access_token'] = text
-                context.user_data['step'] = 2
-                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟐/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐌𝐀𝐈𝐋:")
-            elif step == 2:
-                context.user_data['email'] = text
-                context.user_data['step'] = 3
-                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟑/𝟑 - 𝐄𝐍𝐓𝐄𝐑 𝐎𝐓𝐏 𝐅𝐑𝐎𝐌 {text}:")
-            elif step == 3:
-                result = unbind_email_api(context.user_data['access_token'], context.user_data['email'], text)
-                if 'success' in result:
-                    msg = f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
                 else:
                     msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
                 await update.message.reply_text(msg, reply_markup=get_main_keyboard())
@@ -584,41 +537,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_response = json.dumps(result, indent=2, ensure_ascii=False)
             
             if 'access_token' in result:
-                msg = (
-                    f"𝐄𝐀𝐓 𝐓𝐎 𝐓𝐎𝐊𝐄𝐍\n\n"
-                    f"✅ 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!\n\n"
-                    f"𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n"
-                    f"─────────────────────\n"
-                    f"{full_response}\n"
-                    f"─────────────────────\n\n"
-                    f"🔑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n"
-                    f"{result['access_token']}\n"
-                )
-                
+                msg = f"𝐄𝐀𝐓 𝐓𝐎 𝐓𝐎𝐊𝐄𝐍\n\n✅ 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}\n─────────────────────\n\n🔑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n{result['access_token']}"
                 if 'game_uid' in result:
                     msg += f"\n🎮 𝐆𝐀𝐌𝐄 𝐔𝐈𝐃: {result['game_uid']}"
-                if 'user_id' in result:
-                    msg += f"\n👤 𝐔𝐒𝐄𝐑 𝐈𝐃: {result['user_id']}"
-                if 'uid' in result:
-                    msg += f"\n🆔 𝐔𝐈𝐃: {result['uid']}"
                 if 'nickname' in result:
                     msg += f"\n📛 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {result['nickname']}"
-            elif 'data' in result and 'access_token' in result['data']:
-                data = result['data']
-                msg = (
-                    f"𝐄𝐀𝐓 𝐓𝐎 𝐓𝐎𝐊𝐄𝐍\n\n"
-                    f"✅ 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!\n\n"
-                    f"𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n"
-                    f"─────────────────────\n"
-                    f"{full_response}\n"
-                    f"─────────────────────\n\n"
-                    f"🔑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n"
-                    f"{data['access_token']}\n"
-                )
-                if 'game_uid' in data:
-                    msg += f"\n🎮 𝐆𝐀𝐌𝐄 𝐔𝐈𝐃: {data['game_uid']}"
-                if 'nickname' in data:
-                    msg += f"\n📛 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {data['nickname']}"
             else:
                 msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}\n─────────────────────\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
             
@@ -630,13 +553,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_response = json.dumps(result, indent=2, ensure_ascii=False)
             
             if result.get('status') == 'success' or result.get('success'):
-                msg = (
-                    f"𝐑𝐄𝐕𝐎𝐊𝐄\n\n"
-                    f"✅ 𝐓𝐎𝐊𝐄𝐍 𝐑𝐄𝐕𝐎𝐊𝐄𝐃 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘!\n\n"
-                    f"𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n"
-                    f"─────────────────────\n"
-                    f"{full_response}"
-                )
+                msg = f"𝐑𝐄𝐕𝐎𝐊𝐄\n\n✅ 𝐓𝐎𝐊𝐄𝐍 𝐑𝐄𝐕𝐎𝐊𝐄𝐃!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}"
             else:
                 msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}\n─────────────────────\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
             
@@ -648,33 +565,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_response = json.dumps(result, indent=2, ensure_ascii=False)
             
             if result.get('success'):
-                msg = (
-                    f"𝐉𝐖𝐓 𝐆𝐄𝐍𝐄𝐑𝐀𝐓𝐎𝐑\n\n"
-                    f"✅ 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!\n\n"
-                    f"𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n"
-                    f"─────────────────────\n"
-                    f"{full_response}\n"
-                    f"─────────────────────\n\n"
-                )
-                
-                msg += f"📋 𝐀𝐂𝐂𝐎𝐔𝐍𝐓 𝐔𝐈𝐃: {result.get('account_uid', '𝐍/𝐀')}\n"
-                msg += f"📍 𝐑𝐄𝐆𝐈𝐎𝐍: {result.get('region', '𝐍/𝐀')}\n"
+                msg = f"𝐉𝐖𝐓 𝐆𝐄𝐍𝐄𝐑𝐀𝐓𝐎𝐑\n\n✅ 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}\n─────────────────────\n\n📋 𝐀𝐂𝐂𝐎𝐔𝐍𝐓 𝐔𝐈𝐃: {result.get('account_uid', '𝐍/𝐀')}\n📍 𝐑𝐄𝐆𝐈𝐎𝐍: {result.get('region', '𝐍/𝐀')}"
                 
                 if 'jwt_decoded' in result and 'payload' in result['jwt_decoded']:
                     payload = result['jwt_decoded']['payload']
-                    msg += f"👤 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {payload.get('nickname', '𝐍/𝐀')}\n"
-                    msg += f"📱 𝐂𝐋𝐈𝐄𝐍𝐓 𝐕𝐄𝐑𝐒𝐈𝐎𝐍: {payload.get('client_version', '𝐍/𝐀')}\n"
-                    msg += f"🌎 𝐂𝐎𝐔𝐍𝐓𝐑𝐘 𝐂𝐎𝐃𝐄: {payload.get('country_code', '𝐍/𝐀')}\n"
-                    msg += f"🔒 𝐋𝐎𝐂𝐊 𝐑𝐄𝐆𝐈𝐎𝐍: {payload.get('lock_region', '𝐍/𝐀')}\n"
-                    msg += f"🎮 𝐈𝐒 𝐄𝐌𝐔𝐋𝐀𝐓𝐎𝐑: {payload.get('is_emulator', '𝐍/𝐀')}\n"
-                    
+                    msg += f"\n👤 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {payload.get('nickname', '𝐍/𝐀')}\n📱 𝐂𝐋𝐈𝐄𝐍𝐓 𝐕𝐄𝐑𝐒𝐈𝐎𝐍: {payload.get('client_version', '𝐍/𝐀')}"
                     exp_time = payload.get('exp', 0)
                     if exp_time:
                         exp_date = datetime.fromtimestamp(exp_time).strftime('%Y-%m-%d %H:%M:%S')
-                        msg += f"⏰ 𝐄𝐗𝐏𝐈𝐑𝐄𝐒 𝐀𝐓: {exp_date}\n"
+                        msg += f"\n⏰ 𝐄𝐗𝐏𝐈𝐑𝐄𝐒 𝐀𝐓: {exp_date}"
                 
                 jwt_token = result.get('jwt', '𝐍/𝐀')
-                msg += f"\n🔑 𝐉𝐖𝐓 𝐓𝐎𝐊𝐄𝐍:\n{jwt_token[:150]}..."
+                msg += f"\n\n🔑 𝐉𝐖𝐓 𝐓𝐎𝐊𝐄𝐍:\n{jwt_token[:150]}..."
             else:
                 msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n𝐅𝐔𝐋𝐋 𝐑𝐄𝐒𝐏𝐎𝐍𝐒𝐄:\n─────────────────────\n{full_response}\n─────────────────────\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
             
@@ -688,7 +590,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 username = user.first_name or str(target_id)
                 add_to_whitelist(target_id, username, user_id)
                 await update.message.reply_text(
-                    f"✅ 𝐔𝐒𝐄𝐑 𝐀𝐃𝐃𝐄𝐃 𝐓𝐎 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓!\n\n𝐔𝐒𝐄𝐑 𝐈𝐃: {target_id}\n𝐍𝐀𝐌𝐄: {username}",
+                    f"✅ 𝐔𝐒𝐄𝐑 𝐀𝐃𝐃𝐄𝐃!\n\n𝐔𝐒𝐄𝐑 𝐈𝐃: {target_id}\n𝐍𝐀𝐌𝐄: {username}",
                     reply_markup=get_admin_keyboard()
                 )
             except:
@@ -700,22 +602,40 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 target_id = int(text)
                 remove_from_whitelist(target_id)
                 await update.message.reply_text(
-                    f"✅ 𝐔𝐒𝐄𝐑 𝐑𝐄𝐌𝐎𝐕𝐄𝐃 𝐅𝐑𝐎𝐌 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓!\n\n𝐔𝐒𝐄𝐑 𝐈𝐃: {target_id}",
+                    f"✅ 𝐔𝐒𝐄𝐑 𝐑𝐄𝐌𝐎𝐕𝐄𝐃!\n\n𝐔𝐒𝐄𝐑 𝐈𝐃: {target_id}",
                     reply_markup=get_admin_keyboard()
                 )
             except:
                 await update.message.reply_text("❌ 𝐈𝐍𝐕𝐀𝐋𝐈𝐃 𝐔𝐒𝐄𝐑 𝐈𝐃!", reply_markup=get_admin_keyboard())
             del context.user_data['conversation']
+        
+        elif conv == 'unbind':
+            step = context.user_data.get('step', 1)
+            if step == 1:
+                context.user_data['access_token'] = text
+                context.user_data['step'] = 2
+                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟐/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐌𝐀𝐈𝐋:")
+            elif step == 2:
+                context.user_data['email'] = text
+                context.user_data['step'] = 3
+                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟑/𝟑 - 𝐄𝐍𝐓𝐄𝐑 𝐎𝐓𝐏 𝐅𝐑𝐎𝐌 {text}:")
+            elif step == 3:
+                result = unbind_email_api(context.user_data['access_token'], context.user_data['email'], text)
+                if 'success' in result:
+                    msg = f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
+                else:
+                    msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
+                await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+                del context.user_data['conversation']
+                del context.user_data['step']
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 'conversation' in context.user_data:
         del context.user_data['conversation']
-    await update.message.reply_text(
-        f"✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!",
-        reply_markup=get_main_keyboard()
-    )
+    await update.message.reply_text("✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!", reply_markup=get_main_keyboard())
 
 async def main():
+    """Main function to run both Flask and Telegram bot"""
     # Start Flask in a separate thread
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
@@ -728,20 +648,23 @@ async def main():
     application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("🤖 𝐁𝐎𝐓 𝐈𝐒 𝐑𝐔𝐍𝐍𝐈𝐍𝐆...")
-    print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐑𝐔𝐍𝐍𝐈𝐍𝐆 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
+    print("🤖 𝐁𝐎𝐓 𝐈𝐒 𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆...")
+    print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
     
-    # Start polling
+    # Start the bot
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
     
+    print("✅ 𝐁𝐎𝐓 𝐈𝐒 𝐑𝐔𝐍𝐍𝐈𝐍𝐆!")
+    
     # Keep running
-    while True:
-        await asyncio.sleep(1)
-
-if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        while True:
+            await asyncio.sleep(1)
     except KeyboardInterrupt:
         print("🛑 𝐁𝐎𝐓 𝐒𝐓𝐎𝐏𝐏𝐄𝐃")
+        await application.stop()
+
+if __name__ == "__main__":
+    asyncio.run(main())
