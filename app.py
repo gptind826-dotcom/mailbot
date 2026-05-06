@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+import sys
+import traceback
+
+# Print Python version for debugging
+print(f"🐍 Python version: {sys.version}")
+print(f"📁 Current working directory: {os.getcwd() if 'os' in dir() else 'unknown'}")
+
 import requests
 import json
 import re
@@ -13,10 +20,13 @@ from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# FIXED: Port set to 8080 as you requested
-PORT = int(os.environ.get("PORT", 8080))
+# Use Render's default port (10000) or fallback to 8080
+PORT = int(os.environ.get("PORT", 10000))
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
+
+print(f"🔧 PORT: {PORT}")
+print(f"🤖 BOT_TOKEN: {'SET' if BOT_TOKEN else 'NOT SET'}")
 
 app_flask = Flask(__name__)
 
@@ -26,7 +36,8 @@ def home():
         "status": "active",
         "bot": "EXRMAIL Bot",
         "uptime": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "version": "2.0"
+        "version": "2.0",
+        "python": sys.version
     })
 
 @app_flask.route('/health')
@@ -34,30 +45,41 @@ def health():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 def run_flask():
-    """Run Flask server for health checks on port 8080"""
-    print(f"🌐 Starting Flask server on port {PORT}")
-    app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
+    try:
+        print(f"🌐 Starting Flask server on port {PORT}")
+        app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
+    except Exception as e:
+        print(f"❌ Flask error: {e}")
+        traceback.print_exc()
 
 def init_db():
-    conn = sqlite3.connect('whitelist.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS whitelist 
-                 (user_id INTEGER PRIMARY KEY, 
-                  username TEXT, 
-                  added_by INTEGER, 
-                  added_date TIMESTAMP)''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('whitelist.db')
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS whitelist 
+                     (user_id INTEGER PRIMARY KEY, 
+                      username TEXT, 
+                      added_by INTEGER, 
+                      added_date TIMESTAMP)''')
+        conn.commit()
+        conn.close()
+        print("✅ Database initialized")
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+        traceback.print_exc()
 
 init_db()
 
 def is_whitelisted(user_id):
-    conn = sqlite3.connect('whitelist.db')
-    c = conn.cursor()
-    c.execute("SELECT 1 FROM whitelist WHERE user_id = ?", (user_id,))
-    result = c.fetchone()
-    conn.close()
-    return result is not None
+    try:
+        conn = sqlite3.connect('whitelist.db')
+        c = conn.cursor()
+        c.execute("SELECT 1 FROM whitelist WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+        conn.close()
+        return result is not None
+    except:
+        return False
 
 def add_to_whitelist(user_id, username, admin_id):
     conn = sqlite3.connect('whitelist.db')
@@ -634,35 +656,46 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!", reply_markup=get_main_keyboard())
 
 async def main():
-    # Start Flask in a separate thread on port 8080
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    
-    # Create bot application
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("cancel", cancel))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    print(f"🤖 𝐁𝐎𝐓 𝐈𝐒 𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆...")
-    print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
-    
-    # Start the bot
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    
-    print("✅ 𝐁𝐎𝐓 𝐈𝐒 𝐑𝐔𝐍𝐍𝐈𝐍𝐆!")
-    
-    # Keep running
     try:
+        print("🚀 Starting bot...")
+        
+        # Start Flask in a separate thread
+        flask_thread = threading.Thread(target=run_flask, daemon=True)
+        flask_thread.start()
+        
+        # Create bot application
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Add handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("cancel", cancel))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        print(f"🤖 Bot connecting to Telegram...")
+        
+        # Start the bot
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        
+        print("✅ Bot is running successfully!")
+        print(f"🌐 Flask server running (health checks on port {PORT})")
+        
+        # Keep running
         while True:
             await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        print("🛑 𝐁𝐎𝐓 𝐒𝐓𝐎𝐏𝐏𝐄𝐃")
-        await application.stop()
+            
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 Bot stopped by user")
+    except Exception as e:
+        print(f"❌ Unhandled exception: {e}")
+        traceback.print_exc()
+        sys.exit(1)
