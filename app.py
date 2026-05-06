@@ -7,13 +7,14 @@ import sqlite3
 import os
 import threading
 import time
+import asyncio
 from datetime import datetime
 from functools import wraps
 from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -391,7 +392,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"𝐄𝐀𝐓 𝐓𝐎 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍\n\n"
             f"𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐀𝐓 𝐓𝐎𝐊𝐄𝐍 𝐎𝐑 𝐔𝐑𝐋:\n\n"
-            f"𝐄𝐗𝐀𝐌𝐏𝐋𝐄: abe4171c9640d880e8b044a991387007ac181a14fe2b0324c8d85068f605b5ea\n\n"
             f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
@@ -458,7 +458,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"𝐀𝐃𝐃 𝐓𝐎 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n"
             f"𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐀𝐃𝐃:\n\n"
-            f"𝐄𝐗𝐀𝐌𝐏𝐋𝐄: 8379062893\n\n"
             f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
@@ -469,7 +468,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"𝐑𝐄𝐌𝐎𝐕𝐄 𝐅𝐑𝐎𝐌 𝐖𝐇𝐈𝐓𝐄𝐋𝐈𝐒𝐓\n\n"
             f"𝐒𝐄𝐍𝐃 𝐓𝐇𝐄 𝐔𝐒𝐄𝐑 𝐈𝐃 𝐓𝐎 𝐑𝐄𝐌𝐎𝐕𝐄:\n\n"
-            f"𝐄𝐗𝐀𝐌𝐏𝐋𝐄: 8379062893\n\n"
             f"𝐓𝐘𝐏𝐄 𝐂𝐀𝐍𝐂𝐄𝐋 𝐓𝐎 𝐂𝐀𝐍𝐂𝐄𝐋.",
             reply_markup=get_cancel_keyboard()
         )
@@ -583,8 +581,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         elif conv == 'eat_to_token':
             result = eat_to_access_api(text)
-            
-            # Get full response as formatted JSON
             full_response = json.dumps(result, indent=2, ensure_ascii=False)
             
             if 'access_token' in result:
@@ -599,24 +595,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"{result['access_token']}\n"
                 )
                 
-                # Check for all possible UID/ID fields
                 if 'game_uid' in result:
                     msg += f"\n🎮 𝐆𝐀𝐌𝐄 𝐔𝐈𝐃: {result['game_uid']}"
                 if 'user_id' in result:
                     msg += f"\n👤 𝐔𝐒𝐄𝐑 𝐈𝐃: {result['user_id']}"
                 if 'uid' in result:
                     msg += f"\n🆔 𝐔𝐈𝐃: {result['uid']}"
-                if 'account_uid' in result:
-                    msg += f"\n📊 𝐀𝐂𝐂𝐎𝐔𝐍𝐓 𝐔𝐈𝐃: {result['account_uid']}"
-                if 'player_id' in result:
-                    msg += f"\n🎮 𝐏𝐋𝐀𝐘𝐄𝐑 𝐈𝐃: {result['player_id']}"
                 if 'nickname' in result:
                     msg += f"\n📛 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {result['nickname']}"
-                if 'name' in result:
-                    msg += f"\n📛 𝐍𝐀𝐌𝐄: {result['name']}"
-                if 'username' in result:
-                    msg += f"\n📛 𝐔𝐒𝐄𝐑𝐍𝐀𝐌𝐄: {result['username']}"
-                    
             elif 'data' in result and 'access_token' in result['data']:
                 data = result['data']
                 msg = (
@@ -629,13 +615,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"🔑 𝐀𝐂𝐂𝐄𝐒𝐒 𝐓𝐎𝐊𝐄𝐍:\n"
                     f"{data['access_token']}\n"
                 )
-                
                 if 'game_uid' in data:
                     msg += f"\n🎮 𝐆𝐀𝐌𝐄 𝐔𝐈𝐃: {data['game_uid']}"
-                if 'user_id' in data:
-                    msg += f"\n👤 𝐔𝐒𝐄𝐑 𝐈𝐃: {data['user_id']}"
-                if 'uid' in data:
-                    msg += f"\n🆔 𝐔𝐈𝐃: {data['uid']}"
                 if 'nickname' in data:
                     msg += f"\n📛 𝐍𝐈𝐂𝐊𝐍𝐀𝐌𝐄: {data['nickname']}"
             else:
@@ -734,19 +715,33 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_main_keyboard()
     )
 
-def main():
+async def main():
+    # Start Flask in a separate thread
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     
-    app = Application.builder().token(BOT_TOKEN).build()
+    # Create bot application
+    application = Application.builder().token(BOT_TOKEN).build()
     
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     print("🤖 𝐁𝐎𝐓 𝐈𝐒 𝐑𝐔𝐍𝐍𝐈𝐍𝐆...")
     print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐑𝐔𝐍𝐍𝐈𝐍𝐆 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    
+    # Start polling
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    # Keep running
+    while True:
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 𝐁𝐎𝐓 𝐒𝐓𝐎𝐏𝐏𝐄𝐃")
