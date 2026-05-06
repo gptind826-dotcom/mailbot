@@ -1,12 +1,13 @@
 services:
   - type: web
-    name: exrmail-telegram-bot
+    name: exrmail-bot
     runtime: python
     plan: free
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
     envVars:
       - key: BOT_TOKEN
-        sync: false
+        value: 8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ
       - key: PORT
         value: 8080
