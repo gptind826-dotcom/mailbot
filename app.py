@@ -8,18 +8,16 @@ import os
 import threading
 import time
 import asyncio
-import sys
 from datetime import datetime
 from flask import Flask, jsonify
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Get port from environment (Render sets this)
-PORT = int(os.environ.get("PORT", 10000))
+# FIXED: Port set to 8080 as you requested
+PORT = int(os.environ.get("PORT", 8080))
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAHvh-rpQIJpw6bBfrMC3UNjaH7bdYPAaUQ")
 ADMIN_IDS = [8379062893, 8287805904]
 
-# Create Flask app for health checks
 app_flask = Flask(__name__)
 
 @app_flask.route('/')
@@ -36,7 +34,7 @@ def health():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 def run_flask():
-    """Run Flask server for health checks"""
+    """Run Flask server for health checks on port 8080"""
     print(f"🌐 Starting Flask server on port {PORT}")
     app_flask.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
@@ -313,9 +311,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     is_admin_status = "𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐓𝐎𝐑" if is_admin(user_id) else "𝐔𝐒𝐄𝐑"
+    greeting = get_greeting()
     
     await update.message.reply_text(
-        f"╔═══《 🎉 {get_greeting()}! 》═══╗\n\n"
+        f"╔═══《 🎉 {greeting}! 》═══╗\n\n"
         f"𝐔𝐒𝐄𝐑: {username}\n"
         f"𝐔𝐒𝐄𝐑 𝐈𝐃: {user_id}\n"
         f"𝐒𝐓𝐀𝐓𝐔𝐒: {is_admin_status}\n\n"
@@ -469,7 +468,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # Handle conversation flows (simplified for brevity - same as before)
+    # Handle conversation flows
     if 'conversation' in context.user_data:
         conv = context.user_data['conversation']
         
@@ -501,6 +500,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 if 'success' in result:
                     msg = f"𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
+                else:
+                    msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
+                await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+                del context.user_data['conversation']
+                del context.user_data['step']
+        
+        elif conv == 'unbind':
+            step = context.user_data.get('step', 1)
+            if step == 1:
+                context.user_data['access_token'] = text
+                context.user_data['step'] = 2
+                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟐/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐌𝐀𝐈𝐋:")
+            elif step == 2:
+                context.user_data['email'] = text
+                context.user_data['step'] = 3
+                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟑/𝟑 - 𝐄𝐍𝐓𝐄𝐑 𝐎𝐓𝐏 𝐅𝐑𝐎𝐌 {text}:")
+            elif step == 3:
+                result = unbind_email_api(context.user_data['access_token'], context.user_data['email'], text)
+                if 'success' in result:
+                    msg = f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
                 else:
                     msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
                 await update.message.reply_text(msg, reply_markup=get_main_keyboard())
@@ -608,26 +627,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 await update.message.reply_text("❌ 𝐈𝐍𝐕𝐀𝐋𝐈𝐃 𝐔𝐒𝐄𝐑 𝐈𝐃!", reply_markup=get_admin_keyboard())
             del context.user_data['conversation']
-        
-        elif conv == 'unbind':
-            step = context.user_data.get('step', 1)
-            if step == 1:
-                context.user_data['access_token'] = text
-                context.user_data['step'] = 2
-                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟐/𝟑 - 𝐒𝐄𝐍𝐃 𝐘𝐎𝐔𝐑 𝐄𝐌𝐀𝐈𝐋:")
-            elif step == 2:
-                context.user_data['email'] = text
-                context.user_data['step'] = 3
-                await update.message.reply_text(f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n𝐒𝐓𝐄𝐏 𝟑/𝟑 - 𝐄𝐍𝐓𝐄𝐑 𝐎𝐓𝐏 𝐅𝐑𝐎𝐌 {text}:")
-            elif step == 3:
-                result = unbind_email_api(context.user_data['access_token'], context.user_data['email'], text)
-                if 'success' in result:
-                    msg = f"𝐔𝐍𝐁𝐈𝐍𝐃\n\n✅ {result['success']}"
-                else:
-                    msg = f"❌ 𝐅𝐀𝐈𝐋𝐄𝐃!\n\n{result.get('error', '𝐔𝐍𝐊𝐍𝐎𝐖𝐍 𝐄𝐑𝐑𝐎𝐑')}"
-                await update.message.reply_text(msg, reply_markup=get_main_keyboard())
-                del context.user_data['conversation']
-                del context.user_data['step']
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 'conversation' in context.user_data:
@@ -635,8 +634,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ 𝐎𝐏𝐄𝐑𝐀𝐓𝐈𝐎𝐍 𝐂𝐀𝐍𝐂𝐄𝐋𝐋𝐄𝐃!", reply_markup=get_main_keyboard())
 
 async def main():
-    """Main function to run both Flask and Telegram bot"""
-    # Start Flask in a separate thread
+    # Start Flask in a separate thread on port 8080
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     
@@ -648,7 +646,7 @@ async def main():
     application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("🤖 𝐁𝐎𝐓 𝐈𝐒 𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆...")
+    print(f"🤖 𝐁𝐎𝐓 𝐈𝐒 𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆...")
     print(f"🌐 𝐅𝐋𝐀𝐒𝐊 𝐒𝐄𝐑𝐕𝐄𝐑 𝐎𝐍 𝐏𝐎𝐑𝐓 {PORT}")
     
     # Start the bot
