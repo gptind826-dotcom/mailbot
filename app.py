@@ -11,7 +11,7 @@ from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAEfz3HLEONPLOz_PAJfQ9nmTu76zM28g7Q")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8483045344:AAGfaN-6jNiqRdOIkZaq0rSl_V0-CZ8SJNc")
 ADMIN_IDS = [8379062893, 8287805904]
 
 def init_db():
